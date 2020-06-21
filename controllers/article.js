@@ -3,7 +3,8 @@
 var validator = require('validator');
 var fs = require('fs');
 var path = require('path');
-var Article = require('../models/article')
+var Article = require('../models/article');
+const { exists } = require('../models/article');
 
 var controller = { 
 
@@ -297,6 +298,66 @@ var controller = {
         
         
 
+    },
+
+    getImage: ( req, res ) => { 
+
+        var file = req.params.image;
+        var path_file = './upload/articles/'+file;
+
+        fs.exists(path_file, (exists)=> {
+            if(exists){
+
+                return res.sendFile(path.resolve(path_file));
+            }
+            else{
+                return res.status(404).send({
+                    status: 'error',
+                    message: `No existe la imagen: ${file}`
+                });
+            }
+        });
+        
+                
+    },
+
+    search: ( req, res ) => { 
+        //sacar el string a buscar
+        var searchString = req.params.search;
+
+        //find
+        Article.find({ 
+            "$or" : [
+
+                {"title": { "$regex": searchString, "$options": "i"}},
+                {"content": { "$regex": searchString, "$options": "i"}},
+            ]
+        })
+        .sort([['date','descending']])
+        .exec((err, articles) => {
+
+            if(err){
+
+                return res.status(404).send({
+                    status: 'error',
+                    message: err
+                });
+            }
+
+            if(articles.length === 0){
+
+                return res.status(404).send({
+                    status: 'error',
+                    message: `No existe coincidencia para ${searchString}`
+                });
+            }
+
+            return res.status(200).send({
+                status: 'success',
+                articles
+            });
+        })
+                                    
     },
 };
 
