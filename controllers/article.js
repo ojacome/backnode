@@ -1,6 +1,8 @@
 'use strict'
 
 var validator = require('validator');
+var fs = require('fs');
+var path = require('path');
 var Article = require('../models/article')
 
 var controller = { 
@@ -227,6 +229,73 @@ var controller = {
                 article: articleDeleted
             });
         });
+
+    },
+
+    upload: ( req, res ) => {     
+        
+        // configurar el modulo connect multiparty en el router
+
+        //recoger el fichero de la petciion
+        var file_name = 'Imagen no subida..';
+
+        if(!req.files){
+            return res.status(400).send({
+                status: 'error',
+                message: file_name
+            });
+        }
+
+        // conseguir nobre y la extension del archivo
+        var file_path = req.files.file0.path;
+        var file_split = file_path.split('\\');        
+        // var file_split = file_path.split('/'); en linux o mac
+
+        file_name = file_split[2];
+        var extension_split = file_name.split('\.');
+        var file_extension = extension_split[1];
+
+        // comprobar la extension, solo imagenes
+        if(file_extension !== 'png' && file_extension !== 'jpg' && file_extension !== 'jprg'){
+
+            //borrar el archivo subido
+            fs.unlink(file_path, (err) => {
+                return res.status(400).send({
+                    status: 'error',
+                    message: 'La imagen debe ser en formato png o jpg.'
+                });
+            });
+        }
+        else{
+
+            var articleId = req.params.id;
+            //buscar el articulo y asignarle el nombre de la imagen y actualizarlo
+            Article.findByIdAndUpdate({_id: articleId}, {image: file_name}, {new: true}, (err, articleUpdated) => {
+
+                if(err || !articleUpdated){
+
+                    fs.unlink(file_path, (err) =>{
+
+                        return res.status(400).send({
+                            status: 'error',
+                            message: `Error al guardar imagen del articulo con id: ${articleId}`
+                        });
+                    });
+                    
+                }
+                else{
+
+                    return res.status(200).send({
+                        status: 'succes',
+                        message: 'La imagen se guardó con éxito.'
+                    });
+                }
+                                
+            });
+            
+        }
+        
+        
 
     },
 };
